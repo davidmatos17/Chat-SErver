@@ -1,0 +1,27 @@
+-> Etapa 1 (compilar programas)
+
+    javac ChatServer.java ChatClient.java
+
+
+
+-> Etapa 2 (Iniciar o server)
+    
+    java ChatServer <porta>
+
+
+
+-> Etapa 3 (Iniciar os Clientes)
+
+    java ChatClient <endereço_servidor> <porta>
+
+
+
+-> Etapa 4 (Testar)
+
+    -Abrir o servidor num terminal.
+    -Conecte dois ou mais clientes (em terminais separados ou máquinas diferentes).
+    -Teste os comandos:
+    -Defina um apelido para cada cliente com /nick <nome>.
+    -Entre em uma sala com /join <sala>. Clientes na mesma sala podem ver as mensagens uns dos outros.
+    -Envie mensagens e observe como elas aparecem nos outros clientes conectados.
+    -Saia da sala com /leave ou desconecte-se com /bye.
