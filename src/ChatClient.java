@@ -5,16 +5,14 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
-
 public class ChatClient {
 
     // Variáveis relacionadas com a interface gráfica --- * NÃO MODIFICAR *
     JFrame frame = new JFrame("Chat Client");
     private JTextField chatBox = new JTextField();
     private JTextArea chatArea = new JTextArea();
-    // --- Fim das variáveis relacionadas coma interface gráfica
+    // --- Fim das variáveis relacionadas com a interface gráfica
 
-    // Se for necessário adicionar variáveis ao objecto ChatClient, devem
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
@@ -24,8 +22,6 @@ public class ChatClient {
         chatArea.append(message + "\n");
     }
 
-
-    // Construtor
     public ChatClient(String server, int port) throws IOException {
         // Inicialização da interface gráfica --- * NÃO MODIFICAR *
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -56,6 +52,7 @@ public class ChatClient {
                 try {
                     newMessage(chatBox.getText());
                 } catch (IOException ex) {
+                    printMessage("Erro ao enviar mensagem: " + ex.getMessage());
                 } finally {
                     chatBox.setText("");
                 }
@@ -68,72 +65,63 @@ public class ChatClient {
         });
         // --- Fim da inicialização da interface gráfica
 
-        // Se for necessário adicionar código de inicialização ao
-        // construtor, deve ser colocado aqui
-
-
         socket = new Socket(server, port);
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
 
-
-    // metodo invocado sempre que o utilizador envia uma mensagem
-    // na caixa de entrada
     public void newMessage(String message) throws IOException {
         if (message.startsWith("/")) {
-            // Enviar comandos diretamente
             out.println(message);
         } else {
-            // Adiciona escape para mensagens normais que começam com "/"
             out.println(message.replaceFirst("^/", "//"));
         }
-
-
     }
 
-
-    // metodo principal
     public void run() {
-        // Thread para ouvir as mensagens do servidor
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
+        new Thread(() -> {
+            try {
+                String response;
+                while ((response = in.readLine()) != null) {
+                    processServerMessage(response);
+                }
+            } catch (IOException e) {
+                printMessage("Conexão com o servidor foi perdida.");
+            } finally {
                 try {
-                    String response;
-                    // Recebe mensagens do servidor e exibe na interface gráfica
-                    while ((response = in.readLine()) != null) {
-                        processServerMessage(response);
-                    }
+                    socket.close();
                 } catch (IOException e) {
-                    printMessage("Conexão com o servidor foi perdida.");
-                } finally {
-                    try {
-                        socket.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    e.printStackTrace();
                 }
             }
         }).start();
     }
 
     private void processServerMessage(String message) {
-        // Formata as mensagens para uma visualização amigável no chat
         if (message.startsWith("MESSAGE")) {
             String[] parts = message.split(" ", 3);
-            printMessage(parts[1] + ": " + parts[2]);
+            if (parts.length == 3) {
+                printMessage(parts[1] + ": " + parts[2]);
+            } else {
+                printMessage("Mensagem de formato inválido recebida do servidor: " + message);
+            }
         } else if (message.startsWith("NEWNICK")) {
             String[] parts = message.split(" ");
-            printMessage(parts[1] + " mudou de nome para " + parts[2]);
+            if (parts.length == 3) {
+                printMessage(parts[1] + " mudou de nome para " + parts[2]);
+            }
         } else if (message.startsWith("JOINED")) {
             String[] parts = message.split(" ");
-            printMessage(parts[1] + " entrou na sala.");
+            if (parts.length == 2) {
+                printMessage(parts[1] + " entrou na sala.");
+            }
         } else if (message.startsWith("LEFT")) {
             String[] parts = message.split(" ");
-            printMessage(parts[1] + " saiu da sala.");
+            if (parts.length == 2) {
+                printMessage(parts[1] + " saiu da sala.");
+            }
         } else if (message.startsWith("ERROR")) {
-            printMessage("Comando inválido ou operação não permitida.");
+            printMessage("Erro recebido do servidor: " + message);
         } else if (message.equals("BYE")) {
             printMessage("Desconectado do servidor.");
             try {
@@ -142,17 +130,12 @@ public class ChatClient {
                 e.printStackTrace();
             }
         } else if (message.equals("OK")) {
-            // Comando foi bem-sucedido, mas sem mensagem específica para mostrar
+            printMessage("OK");
         } else {
-            // Mensagem desconhecida
-            printMessage("Mensagem desconhecida do servidor: " + message);
+            printMessage("Mensagem desconhecida recebida do servidor: " + message);
         }
-
     }
-
-
-    //Instancia o ChatClient e arranca-o invoca o metodo run()
-    // * NÃO MODIFICAR *
+    
     public static void main(String[] args) throws IOException {
         if (args.length < 2) {
             System.out.println("Uso: java ChatClient <endereço_servidor> <porta>");
@@ -165,6 +148,4 @@ public class ChatClient {
             System.out.println("Não foi possível conectar ao servidor: " + e.getMessage());
         }
     }
-
 }
-

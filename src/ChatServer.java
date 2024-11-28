@@ -45,18 +45,28 @@ public class ChatServer {
 
                 String message;
                 while ((message = in.readLine()) != null) {
-                    processMessage(message);
+                    processMessage(message.trim());
                 }
             } catch (IOException e) {
+                System.err.println("Erro ao comunicar com o cliente: " + e.getMessage());
+            } finally {
                 disconnect();
             }
         }
 
         private void processMessage(String message) {
             if (message.startsWith("/nick")) {
-                handleNickCommand(message.split(" ", 2)[1]);
+                if (message.split(" ").length > 1) {
+                    handleNickCommand(message.split(" ", 2)[1]);
+                } else {
+                    out.println("ERROR");
+                }
             } else if (message.startsWith("/join")) {
-                handleJoinCommand(message.split(" ", 2)[1]);
+                if (message.split(" ").length > 1) {
+                    handleJoinCommand(message.split(" ", 2)[1]);
+                } else {
+                    out.println("ERROR");
+                }
             } else if (message.equals("/leave")) {
                 handleLeaveCommand();
             } else if (message.equals("/bye")) {
@@ -70,24 +80,43 @@ public class ChatServer {
 
         private void handleNickCommand(String newNick) {
             synchronized (clients) {
-                if (clients.containsKey(newNick)) {
+                if (clients.containsKey(newNick) || newNick.isEmpty() || newNick.contains(" ")) {
                     out.println("ERROR");
                 } else {
-                    if (userName != null) clients.remove(userName);
+                    String oldNick = userName;
+                    if (oldNick != null) {
+                        clients.remove(oldNick);
+                    }
                     userName = newNick;
                     clients.put(userName, this);
                     out.println("OK");
-                    if (state.equals("init")) state = "outside";
+
+                    if (state.equals("init")) {
+                        state = "outside";
+                    } else if (state.equals("inside")) {
+                        broadcastToRoom("NEWNICK " + oldNick + " " + userName, currentRoom);
+                    }
                 }
             }
         }
 
         private void handleJoinCommand(String room) {
-            if (state.equals("outside") || (state.equals("inside") && !room.equals(currentRoom))) {
-                leaveRoom();
+            if (state.equals("init")) {
+                out.println("ERROR");
+                return;
+            }
+
+            if (state.equals("inside") && room.equals(currentRoom)) {
+                out.println("ERROR");
+                return;
+            }
+
+            leaveRoom();
+
+            synchronized (rooms) {
                 currentRoom = room;
-                state = "inside";
                 rooms.computeIfAbsent(room, k -> new HashSet<>()).add(this);
+                state = "inside";
                 out.println("OK");
                 broadcastToRoom("JOINED " + userName, room);
             }
@@ -98,6 +127,8 @@ public class ChatServer {
                 out.println("OK");
                 leaveRoom();
                 state = "outside";
+            } else {
+                out.println("ERROR");
             }
         }
 
@@ -107,8 +138,12 @@ public class ChatServer {
         }
 
         private void handleMessage(String message) {
+            if (message.isEmpty()) {
+                out.println("ERROR");
+                return;
+            }
+
             String escapedMessage = message.replace("/", "//");
-            out.println("MESSAGE " + userName + " " + escapedMessage);
             broadcastToRoom("MESSAGE " + userName + " " + escapedMessage, currentRoom);
         }
 
@@ -117,11 +152,13 @@ public class ChatServer {
                 Set<ClientHandler> roomClients = rooms.get(currentRoom);
                 if (roomClients != null) {
                     roomClients.remove(this);
-                    broadcastToRoom("LEFT " + userName, currentRoom);
-                    if (roomClients.isEmpty()) {
+                    if (!roomClients.isEmpty()) {
+                        broadcastToRoom("LEFT " + userName, currentRoom);
+                    } else {
                         rooms.remove(currentRoom);
                     }
                 }
+                currentRoom = null;
             }
         }
 
@@ -129,16 +166,23 @@ public class ChatServer {
             Set<ClientHandler> roomClients = rooms.get(room);
             if (roomClients != null) {
                 for (ClientHandler client : roomClients) {
-                    if (client != this) {
+                    try {
                         client.out.println(message);
+                    } catch (Exception e) {
+                        System.err.println("Erro ao enviar mensagem para o cliente: " + client.userName);
                     }
                 }
             }
         }
+        
 
         private void disconnect() {
             leaveRoom();
-            if (userName != null) clients.remove(userName);
+            synchronized (clients) {
+                if (userName != null) {
+                    clients.remove(userName);
+                }
+            }
             try {
                 socket.close();
             } catch (IOException e) {
