@@ -67,6 +67,13 @@ public class ChatServer {
                 } else {
                     out.println("ERROR");
                 }
+            }else if (message.startsWith("/priv")) {
+                    String[] parts = message.split(" ", 3);
+                    if (parts.length == 3) {
+                        handlePrivateMessage(parts[1], parts[2]);
+                    } else {
+                        out.println("ERROR");
+                    }
             } else if (message.equals("/leave")) {
                 handleLeaveCommand();
             } else if (message.equals("/bye")) {
@@ -137,15 +144,15 @@ public class ChatServer {
             disconnect();
         }
 
-        private void handleMessage(String message) {
-            if (message.isEmpty()) {
-                out.println("ERROR");
-                return;
+        private void handleMessage(String var1) {
+            if (var1.isEmpty()) {
+                this.out.println("ERROR");
+            } else {
+                String var2 = var1.startsWith("/") ? "//" + var1.substring(1) : var1;
+                this.broadcastToRoom("MESSAGE " + this.userName + " " + var2, this.currentRoom);
             }
-
-            String escapedMessage = message.replace("/", "//");
-            broadcastToRoom("MESSAGE " + userName + " " + escapedMessage, currentRoom);
         }
+        
 
         private void leaveRoom() {
             if (currentRoom != null) {
@@ -189,5 +196,17 @@ public class ChatServer {
                 e.printStackTrace();
             }
         }
+        private void handlePrivateMessage(String recipientName, String message) {
+            synchronized (clients) {
+                ClientHandler recipient = clients.get(recipientName);
+                if (recipient == null) {
+                    out.println("ERROR");
+                } else {
+                    out.println("OK");
+                    recipient.out.println("PRIVATE " + userName + " " + message);
+                }
+            }
+        }
+        
     }
 }

@@ -101,7 +101,18 @@ public class ChatClient {
         if (message.startsWith("MESSAGE")) {
             String[] parts = message.split(" ", 3);
             if (parts.length == 3) {
-                printMessage(parts[1] + ": " + parts[2]);
+                // Replace "//" at the beginning of the message content with "/"
+                String content = parts[2].startsWith("//") ? parts[2].substring(1) : parts[2];
+                printMessage(parts[1] + ": " + content);
+            } else {
+                printMessage("Mensagem de formato inválido recebida do servidor: " + message);
+            }
+        }else if (message.startsWith("PRIVATE")) {
+            String[] parts = message.split(" ", 3);
+            if (parts.length == 3) {
+                // Replace "//" at the beginning of the message content with "/"
+                String content = parts[2].startsWith("//") ? parts[2].substring(1) : parts[2];
+                printMessage("Mensagem privada de " + parts[1] + ": " + content);
             } else {
                 printMessage("Mensagem de formato inválido recebida do servidor: " + message);
             }
@@ -110,6 +121,7 @@ public class ChatClient {
             if (parts.length == 3) {
                 printMessage(parts[1] + " mudou de nome para " + parts[2]);
             }
+            
         } else if (message.startsWith("JOINED")) {
             String[] parts = message.split(" ");
             if (parts.length == 2) {
@@ -135,6 +147,7 @@ public class ChatClient {
             printMessage("Mensagem desconhecida recebida do servidor: " + message);
         }
     }
+    
     
     public static void main(String[] args) throws IOException {
         if (args.length < 2) {
