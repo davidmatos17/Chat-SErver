@@ -116,6 +116,15 @@ public class ChatClient {
             } else {
                 printMessage("Mensagem de formato inválido recebida do servidor: " + message);
             }
+        }else if (message.startsWith("SENDPRIVATE")) {
+            String[] parts = message.split(" ", 3);
+            if (parts.length == 3) {
+                // Replace "//" at the beginning of the message content with "/"
+                String content = parts[2].startsWith("//") ? parts[2].substring(1) : parts[2];
+                printMessage("Mensagem privada para " + parts[1] + ": " + content);
+            } else {
+                printMessage("Mensagem de formato inválido recebida do servidor: " + message);
+            }
         } else if (message.startsWith("NEWNICK")) {
             String[] parts = message.split(" ");
             if (parts.length == 3) {

@@ -204,9 +204,11 @@ public class ChatServer {
                 } else {
                     out.println("OK");
                     recipient.out.println("PRIVATE " + userName + " " + message);
+                    out.println("SENDPRIVATE " + recipientName + " " + message);
                 }
             }
         }
+        
         
     }
 }
